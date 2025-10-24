@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from config import block_size, device, n_embd, n_head, n_layer, dropout
-from read_file import vocab_size
+from params.config import block_size, device, n_embd, n_head, n_layer, dropout
+from params.read_file import vocab_size
 
 
 class Head(nn.Module):

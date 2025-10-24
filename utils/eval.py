@@ -1,7 +1,7 @@
 import torch
-from batch import get_batch
 
-from config import eval_iters
+from utils.batch import get_batch
+from params.config import eval_iters
 
 
 @torch.no_grad()

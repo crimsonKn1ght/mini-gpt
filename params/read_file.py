@@ -1,7 +1,7 @@
 import torch
 
 
-with open('text.txt', 'r', encoding='utf-8') as file:
+with open('dataset/text.txt', 'r', encoding='utf-8') as file:
     text = file.read()
 
 chrs = sorted(list(set(text)))

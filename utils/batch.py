@@ -1,7 +1,7 @@
 import torch
 
-from config import block_size, batch_size, device
-from read_file import train_data, val_data
+from params.config import block_size, batch_size, device
+from params.read_file import train_data, val_data
 
 
 def get_batch(split):

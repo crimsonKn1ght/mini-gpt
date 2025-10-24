@@ -1,12 +1,12 @@
 # imports
 import torch
 
-from model import BigramLanguageModel
-from eval import estimate_loss
-from batch import get_batch
+from utils.model import BigramLanguageModel
+from utils.eval import estimate_loss
+from utils.batch import get_batch
 
-from config import max_iters, eval_interval, learning_rate, device
-from read_file import decode
+from params.config import max_iters, eval_interval, learning_rate, device
+from params.read_file import decode
 # --------------
 
 torch.manual_seed(1337)
