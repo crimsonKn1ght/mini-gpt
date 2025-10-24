@@ -1,66 +1,9 @@
-# imports
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-# --------------
 
-# hyperparams
-batch_size = 64
-block_size = 256
-max_iters = 5000
-eval_interval = 500
-learning_rate = 3e-4
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-eval_iters = 200
-n_embd = 384
-n_head = 6
-n_layer = 6
-dropout = 0.2
-# --------------
-
-torch.manual_seed(1337)
-
-with open('text.txt', 'r', encoding='utf-8') as file:
-    text = file.read()
-
-chrs = sorted(list(set(text)))
-vocab_size = len(chrs)
-
-stoi = {ch:i for i, ch in enumerate(chrs)}
-itos = {i:ch for i, ch in enumerate(chrs)}
-
-encode = lambda s: [stoi[ch] for ch in s]
-decode = lambda s: [itos[ch] for ch in s]
-
-data = torch.tensor(encode(text), dtype = torch.long)
-n = int(0.9 * len(data))
-train_data = data[:n]
-val_data = data[n:]
-
-
-def get_batch(split):
-    data = train_data if split == "train" else val_data
-    ix = torch.randint(len(data) - block_size, (batch_size, ))
-    x = torch.stack([data[i:i+block_size] for i in ix])
-    y = torch.stack([data[i+1:i+block_size+1] for i in ix])
-    x, y = x.to(device), y.to(device)
-    return x, y
-
-
-@torch.no_grad()
-def estimate_loss():
-    out = {}
-    model.eval()
-
-    for split in ['train', 'val']:
-        losses = torch.zeros(eval_iters)
-        for k in range(eval_iters):
-            X, Y = get_batch(split)
-            logits, loss = model(X, Y)
-            losses[k] = loss.item()
-        out[split] = losses.mean()
-    model.train()
-    return out
+from config import block_size, device, n_embd, n_head, n_layer, dropout
+from read_file import vocab_size
 
 
 class Head(nn.Module):
@@ -77,12 +20,12 @@ class Head(nn.Module):
         k = self.key(x)
         q = self.query(x)
 
-        wei = q @ k.transpose(-2, -1) * C ** -0.5       # (B, T, C) @ (B, C, T) -> (B, T, T)
-        wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf'))             # (B, T, T)
-        wei = F.softmax(wei, dim=-1)    # (B, T, T)
+        wei = q @ k.transpose(-2, -1) * C ** -0.5                           # (B, T, C) @ (B, C, T) -> (B, T, T)
+        wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf'))        # (B, T, T)
+        wei = F.softmax(wei, dim=-1)                                        # (B, T, T)
         wei = self.dropout(wei)
-        v = self.value(x)               # (B, T, C)
-        out = wei @ v                   # (B, T, T) @ (B, T, C) -> (B, T, C)
+        v = self.value(x)                                                   # (B, T, C)
+        out = wei @ v                                                       # (B, T, T) @ (B, T, C) -> (B, T, C)
 
         return out        
 
@@ -123,7 +66,7 @@ class Block(nn.Module):
     def __init__(self, n_embd, n_head):
         super().__init__()
         head_size = n_embd // n_head
-        self.sa = multiHeadAttention(n_head, head_size)             # 4 heads of 8-dim self attention
+        self.sa = multiHeadAttention(n_head, head_size)                 # 4 heads of 8-dim self attention
         # so basically in place of one huge convolution, we're performing convolutions in groups
         self.ffwd = FeedForward(n_embd)
         self.ln1 = nn.LayerNorm(n_embd)
@@ -173,24 +116,3 @@ class BigramLanguageModel(nn.Module):
             idx_nxt = torch.multinomial(probs, num_samples=1)
             idx = torch.concatenate([idx, idx_nxt], dim=1)
         return idx
-    
-model = BigramLanguageModel()
-m = model.to(device)
-
-optimizer = torch.optim.AdamW(m.parameters(), lr=learning_rate)
-
-
-for iter in range(max_iters):
-    if iter % eval_interval == 0:
-        losses = estimate_loss()
-        print(f"Step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
-
-    xb, yb = get_batch('train')
-
-    logits, loss = model(xb, yb)
-    optimizer.zero_grad(set_to_none=True)
-    loss.backward()
-    optimizer.step()
-
-context = torch.zeros((1, 1), dtype=torch.long, device=device)
-print(''.join(decode(m.generate(context, max_new_tokens=500)[0].tolist())))
